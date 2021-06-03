@@ -7,8 +7,8 @@ public class MyNetworkManager : NetworkManager
 {
     /// <summary>Player Prefabs that can be spawned over the network need to be registered here.</summary>
     public GameObject[] playerPrefabs;
-
-    List<int> playerIndeces = new List<int>();
+    /// <summary>Player Spawns</summary>
+    public Transform[] playerSpawns;
     
 
     public override void OnStartServer()
@@ -23,11 +23,11 @@ public class MyNetworkManager : NetworkManager
         Debug.Log("Server stopped");
     }
 
-    // public override void OnClientConnect(NetworkConnection conn)
-    // {
-    //     // base.OnClientConnect(conn);
-    //     Debug.Log("Connected to server");
-    // }
+    public override void OnClientConnect(NetworkConnection conn)
+    {
+        // base.OnClientConnect(conn);
+        Debug.Log("Connected to server");
+    }
 
     public override void OnClientDisconnect(NetworkConnection conn)
     {
@@ -35,21 +35,26 @@ public class MyNetworkManager : NetworkManager
         Debug.Log("Disconnected from server");
     }
 
-    //Called on client when connect
-     public override void OnClientConnect(NetworkConnection conn) {       
-         NetworkClient.AddPlayer();
-         
-     }
-  
- // Server
-     public override void OnServerAddPlayer(NetworkConnection conn) {
-         //Select the prefab from the spawnable objects list
-        //  var playerPrefab = playerPrefabs[curPlayer];       
-  
-         // Create player object with prefab
-        //  var player = Instantiate(playerPrefab, spawnPosition.position, Quaternion.identity) as GameObject;        
-         
-         // Add player object for connection
-        //  NetworkServer.AddPlayerForConnection(conn, player, playerControllerId);
-     }
+    public override void OnServerAddPlayer(NetworkConnection conn)
+    {
+        // base.OnServerAddPlayer(conn);
+        int index = 0;
+
+        //conn.connectionId == 0 - host
+        if(conn.connectionId != 0){
+            index = 1;
+        }
+
+        Debug.Log("Player Index: "+index);
+        Transform startPos = playerSpawns[index];
+        GameObject thePlayerPrefab = playerPrefabs[index];
+            GameObject player = startPos != null
+                ? Instantiate(thePlayerPrefab, startPos.position, startPos.rotation)
+                : Instantiate(thePlayerPrefab);
+
+            // instantiating a "Player" prefab gives it the name "Player(clone)"
+            // => appending the connectionId is WAY more useful for debugging!
+            player.name = $"{thePlayerPrefab.name} [connId={conn.connectionId}]";
+            NetworkServer.AddPlayerForConnection(conn, player);
+    }
 }
